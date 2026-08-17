@@ -171,8 +171,18 @@
   setInterval(updateCountdown, 1000);
 
   // ---- Guess-who game: 3 attempts per day, reset daily ----
-  const ANSWER = "bhaiya"; // stored lowercase for comparison
+  // The answer is NOT stored as plain text — only its SHA-256 hash is kept here,
+  // so opening dev tools / view-source won't reveal the actual word.
+  const ANSWER_HASH = "8a47cccff5a0b4e11f87b5997986091cbd7acde690760373eac2e385c4ef754b";
   const MAX_ATTEMPTS = 3;
+
+  async function sha256(text) {
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
 
   function todayKey() {
     const d = new Date();
@@ -214,7 +224,7 @@
     }
   }
 
-  function submitGuess() {
+  async function submitGuess() {
     const left = getAttemptsLeft();
     if (left <= 0) { renderAttempts(); return; }
 
@@ -231,7 +241,9 @@
     const used = parseInt(localStorage.getItem('guessAttempts') || '0', 10);
     localStorage.setItem('guessAttempts', String(used + 1));
 
-    if (guess === ANSWER) {
+    const guessHash = await sha256(guess);
+
+    if (guessHash === ANSWER_HASH) {
       localStorage.setItem('guessSolved', 'true');
       msgEl.textContent = "🎉 You got it! But I'm staying mysterious a little longer... see you soon 😏";
       msgEl.className = "msg success";
