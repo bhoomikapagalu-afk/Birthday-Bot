@@ -8,7 +8,7 @@ from datetime import date
 # ---------------- CONFIG ----------------
 BIRTHDAY_MONTH = 9
 BIRTHDAY_DAY = 23
-TO_EMAIL = "bugfinder1149@gmail.com"
+TO_EMAIL = "aadivarshney9@gmail.com"
 TO_NAME = "Bhoomika"
 
 # Set this to your GitHub Pages URL once it's live, e.g.
