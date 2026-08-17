@@ -1,118 +1,267 @@
-import smtplib
-import os
-import random
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import date
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Little Mystery, Bhoomika 🎂</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #fdf6f0, #f3e7fb);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 20px;
+    max-width: 460px;
+    width: 100%;
+    padding: 32px 28px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  h1 {
+    color: #d63384;
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  .sub {
+    color: #777;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .timer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .timer div {
+    background: #f3e7fb;
+    border-radius: 12px;
+    padding: 12px 10px;
+    min-width: 64px;
+  }
+  .timer .num {
+    font-size: 26px;
+    font-weight: bold;
+    color: #6f42c1;
+  }
+  .timer .label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 24px 0;
+  }
+  .guess-section h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 6px;
+  }
+  .hint {
+    color: #d63384;
+    font-size: 14px;
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+  input[type=text] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+  button {
+    background: #d63384;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .msg {
+    margin-top: 14px;
+    font-size: 14px;
+    min-height: 20px;
+  }
+  .attempts {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #999;
+  }
+  .success {
+    color: #198754;
+    font-weight: bold;
+  }
+  .fail {
+    color: #dc3545;
+  }
+</style>
+</head>
+<body>
 
-# ---------------- CONFIG ----------------
-BIRTHDAY_MONTH = 9
-BIRTHDAY_DAY = 23
-TO_EMAIL = "bugfinder1149@gmail.com"
-TO_NAME = "Bhoomika"
+<div class="card">
+  <h1>Hey Bhoomika 👋</h1>
+  <div class="sub">Counting down to your big day...</div>
 
-# Set this to your GitHub Pages URL once it's live, e.g.
-# https://yourusername.github.io/your-repo-name/
-GUESS_PAGE_URL = os.environ.get("GUESS_PAGE_URL", "https://YOUR_USERNAME.github.io/YOUR_REPO/")
+  <div class="timer">
+    <div><div class="num" id="days">--</div><div class="label">Days</div></div>
+    <div><div class="num" id="hours">--</div><div class="label">Hours</div></div>
+    <div><div class="num" id="minutes">--</div><div class="label">Min</div></div>
+    <div><div class="num" id="seconds">--</div><div class="label">Sec</div></div>
+  </div>
 
-GMAIL_USER = os.environ["GMAIL_USER"]
-GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
-# -----------------------------------------
+  <hr>
 
-MESSAGES = [
-    "Quarterly review of your awesomeness is due in {days} day(s) \u2014 spoiler: you're crushing every KPI of being amazing.",
-    "Reminder: your birthday deadline is approaching. No extensions. No exceptions. {days} day(s) left on the clock.",
-    "Breaking news from the corporate world: {days} day(s) until the most important stakeholder meeting of the year \u2014 your birthday.",
-    "Your out-of-office auto-reply for 'turning a year more wonderful' kicks in {days} day(s) from now.",
-    "Someone's getting promoted to 'Officially One Year Cooler' \u2014 effective in {days} day(s).",
-    "This is your {days}-day notice: the world is about to get a little brighter.",
-    "Just a friendly ping (not a Slack notification) \u2014 {days} day(s) left till your big day.",
-    "Filing this under 'urgent and important': {days} day(s) to go till we celebrate you.",
-    "T-minus {days} day(s). Cake pending approval. Approval status: definitely approved.",
-    "Adding this to your calendar as high priority: {days} day(s) until your birthday sprint begins.",
-    "Performance review update: you've exceeded expectations all year. Celebration scheduled in {days} day(s).",
-    "Escalating this ticket: 'Missing: one birthday celebration.' ETA {days} day(s).",
-]
+  <div class="guess-section">
+    <h2>Want to know who's behind this? 🕵️‍♀️</h2>
+    <div class="hint">Hint: find my nickname</div>
+    <input type="text" id="guessInput" placeholder="Type your guess..." autocomplete="off">
+    <br>
+    <button id="guessBtn" onclick="submitGuess()">Guess</button>
+    <div class="msg" id="msg"></div>
+    <div class="attempts" id="attemptsLeft"></div>
+  </div>
+</div>
 
+<script>
+  // ---- Countdown target: nearest upcoming Sept 23 ----
+  function getTarget() {
+    const now = new Date();
+    let year = now.getFullYear();
+    let target = new Date(year, 8, 23, 0, 0, 0); // month is 0-indexed, 8 = September
+    if (target < now) {
+      target = new Date(year + 1, 8, 23, 0, 0, 0);
+    }
+    return target;
+  }
 
-def build_email(days):
-    subject = f"\u23f3 {days} day(s) to go, {TO_NAME}!"
-    body_text = random.choice(MESSAGES).format(days=days)
-    html = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; background:#fdf6f0; padding:24px;">
-      <div style="max-width:480px;margin:auto;background:white;border-radius:16px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
-        <h2 style="color:#d63384;">Hey {TO_NAME} 👋</h2>
-        <p style="font-size:16px;color:#333;">{body_text}</p>
-        <p style="font-size:28px;font-weight:bold;color:#6f42c1;text-align:center;margin:24px 0;">
-          {days} day(s) left
-        </p>
-        <p style="font-size:15px;color:#555;">
-          Curious who's sending these? You get <b>3 guesses a day</b>. Hint: <i>find my nickname</i>.
-        </p>
-        <p style="text-align:center;margin-top:20px;">
-          <a href="{GUESS_PAGE_URL}" style="background:#d63384;color:white;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">
-            Guess who I am →
-          </a>
-        </p>
-        <p style="font-size:12px;color:#999;text-align:center;margin-top:30px;">Sent at midnight, just for you.</p>
-      </div>
-    </body>
-    </html>
-    """
-    return subject, body_text, html
+  function updateCountdown() {
+    const now = new Date();
+    const target = getTarget();
+    let diff = Math.max(0, target - now);
 
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
 
-def birthday_email():
-    subject = f"\U0001F389 It's your day, {TO_NAME}!"
-    text = f"Happy Birthday {TO_NAME}! Hope today is as amazing as you are."
-    html = f"""
-    <html><body style="font-family:Arial,sans-serif;padding:24px;background:#fdf6f0;">
-      <div style="max-width:480px;margin:auto;background:white;border-radius:16px;padding:24px;text-align:center;">
-        <h1 style="color:#d63384;">Happy Birthday, {TO_NAME}! 🎂</h1>
-        <p style="font-size:16px;color:#333;">Hope today is as amazing as you are. Enjoy every bit of it!</p>
-        <p style="font-size:15px;color:#555;margin-top:20px;">
-          Still haven't guessed who's been sending these? You've got 3 tries a day. Hint: <i>find my nickname</i>.
-        </p>
-        <p style="text-align:center;margin-top:20px;">
-          <a href="{GUESS_PAGE_URL}" style="background:#d63384;color:white;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">
-            Guess who I am →
-          </a>
-        </p>
-      </div>
-    </body></html>
-    """
-    return subject, text, html
+    document.getElementById('days').textContent = days;
+    document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+    document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+    document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 
+  // ---- Guess-who game: 3 attempts per day, reset daily ----
+  // The answer is NOT stored as plain text — only its SHA-256 hash is kept here,
+  // so opening dev tools / view-source won't reveal the actual word.
+  const ANSWER_HASH = "8a47cccff5a0b4e11f87b5997986091cbd7acde690760373eac2e385c4ef754b";
+  const MAX_ATTEMPTS = 3;
 
-def send():
-    today = date.today()
-    bday_this_year = date(today.year, BIRTHDAY_MONTH, BIRTHDAY_DAY)
+  async function sha256(text) {
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf))
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
 
-    if today > bday_this_year:
-        print("This year's birthday has already passed. Skipping send.")
-        return
+  function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  }
 
-    days = (bday_this_year - today).days
+  function getAttemptsLeft() {
+    const storedDate = localStorage.getItem('guessDate');
+    const today = todayKey();
+    if (storedDate !== today) {
+      // new day, reset
+      localStorage.setItem('guessDate', today);
+      localStorage.setItem('guessAttempts', '0');
+      localStorage.removeItem('guessSolved');
+    }
+    const used = parseInt(localStorage.getItem('guessAttempts') || '0', 10);
+    return MAX_ATTEMPTS - used;
+  }
 
-    if days == 0:
-        subject, text, html = birthday_email()
-    else:
-        subject, text, html = build_email(days)
+  function renderAttempts() {
+    const left = getAttemptsLeft();
+    const solved = localStorage.getItem('guessSolved') === 'true';
+    const btn = document.getElementById('guessBtn');
+    const input = document.getElementById('guessInput');
+    const attemptsEl = document.getElementById('attemptsLeft');
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = GMAIL_USER
-    msg["To"] = TO_EMAIL
-    msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
+    if (solved) {
+      attemptsEl.textContent = "You already cracked it today 😉";
+      btn.disabled = true;
+      input.disabled = true;
+    } else if (left <= 0) {
+      attemptsEl.textContent = "No attempts left today. Come back tomorrow!";
+      btn.disabled = true;
+      input.disabled = true;
+    } else {
+      attemptsEl.textContent = `${left} attempt(s) left today`;
+      btn.disabled = false;
+      input.disabled = false;
+    }
+  }
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, TO_EMAIL, msg.as_string())
+  async function submitGuess() {
+    const left = getAttemptsLeft();
+    if (left <= 0) { renderAttempts(); return; }
 
-    print(f"Sent email successfully. Days remaining: {days}")
+    const input = document.getElementById('guessInput');
+    const guess = input.value.trim().toLowerCase();
+    const msgEl = document.getElementById('msg');
 
+    if (!guess) {
+      msgEl.textContent = "Type something first!";
+      msgEl.className = "msg fail";
+      return;
+    }
 
-if __name__ == "__main__":
-    send()
+    const used = parseInt(localStorage.getItem('guessAttempts') || '0', 10);
+    localStorage.setItem('guessAttempts', String(used + 1));
+
+    const guessHash = await sha256(guess);
+
+    if (guessHash === ANSWER_HASH) {
+      localStorage.setItem('guessSolved', 'true');
+      msgEl.textContent = "🎉 You got it! But I'm staying mysterious a little longer... see you soon 😏";
+      msgEl.className = "msg success";
+    } else {
+      msgEl.textContent = "Nope, not it. Try again!";
+      msgEl.className = "msg fail";
+    }
+
+    input.value = "";
+    renderAttempts();
+  }
+
+  document.getElementById('guessInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submitGuess();
+  });
+
+  renderAttempts();
+</script>
+
+</body>
+</html>
